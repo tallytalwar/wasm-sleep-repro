@@ -6,9 +6,10 @@ on:
 
 jobs:
   repro:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-22.04, macos-15]
         emscripten: ["5.0.5", "5.0.6"]
       fail-fast: false
     steps:
