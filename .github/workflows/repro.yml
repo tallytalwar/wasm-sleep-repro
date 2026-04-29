@@ -1,0 +1,40 @@
+name: wasm-sleep-repro
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  repro:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        emscripten: ["5.0.5", "5.0.6"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emscripten ${{ matrix.emscripten }}
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install ${{ matrix.emscripten }}
+          ./emsdk activate ${{ matrix.emscripten }}
+
+      - name: Build
+        run: |
+          source emsdk/emsdk_env.sh
+          echo "emcc: $(emcc --version | head -1)"
+          echo "node: $(node --version)"
+          em++ -pthread -o test_sleep.js test_sleep.cpp
+
+      - name: Test (emsdk node)
+        run: |
+          source emsdk/emsdk_env.sh
+          echo "node: $(node --version)"
+          node test_sleep.js
+
+      - name: Test (system node)
+        run: |
+          echo "node: $(node --version)"
+          node test_sleep.js
