@@ -10,43 +10,59 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, macos-15]
-        emscripten_commit:
-          - { sha: "82e188595e", label: "before-01b61e46d8" }
-          - { sha: "01b61e46d8", label: "after-01b61e46d8" }
+        emscripten: ["5.0.5", "5.0.6", "5.0.7"]
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Emscripten 5.0.6 toolchain
+      - name: Install Emscripten ${{ matrix.emscripten }}
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
-          ./emsdk install 5.0.6
-          ./emsdk activate 5.0.6
-
-      - name: Clone emscripten source repo
-        run: git clone https://github.com/emscripten-core/emscripten.git emscripten-src
-
-      - name: Swap changed files to ${{ matrix.emscripten_commit.label }}
-        run: |
-          cd emscripten-src
-          git checkout ${{ matrix.emscripten_commit.sha }}
-          echo "emscripten source commit: $(git rev-parse --short HEAD)"
-          cp system/lib/pthread/library_pthread.c      ../emsdk/upstream/emscripten/system/lib/pthread/library_pthread.c
-          cp system/lib/pthread/library_pthread_stub.c ../emsdk/upstream/emscripten/system/lib/pthread/library_pthread_stub.c
-          cp system/lib/pthread/emscripten_futex_wait.c ../emsdk/upstream/emscripten/system/lib/pthread/emscripten_futex_wait.c
+          ./emsdk install ${{ matrix.emscripten }}
+          ./emsdk activate ${{ matrix.emscripten }}
 
       - name: Build
         run: |
           source emsdk/emsdk_env.sh
-          emcc --clear-cache
           echo "emcc: $(emcc --version | head -1)"
-          echo "node: $(node --version)"
           em++ -pthread -o test_sleep.js test_sleep.cpp
 
-      - name: Test
+      - name: Test (emsdk node)
         run: |
           source emsdk/emsdk_env.sh
+          echo "node: $($EMSDK_NODE --version)"
+          $EMSDK_NODE test_sleep.js
+
+      - name: Test (system node)
+        run: |
+          echo "node: $(node --version)"
+          node test_sleep.js
+
+      - name: Setup Node.js 21
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+      - name: Test (node 21)
+        run: |
+          echo "node: $(node --version)"
+          node test_sleep.js
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test (node 22)
+        run: |
+          echo "node: $(node --version)"
+          node test_sleep.js
+
+      - name: Setup Node.js 23
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+      - name: Test (node 23)
+        run: |
           echo "node: $(node --version)"
           node test_sleep.js
